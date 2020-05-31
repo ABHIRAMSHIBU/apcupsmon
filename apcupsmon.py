@@ -139,10 +139,12 @@ if(len(sys.argv)>=2):
         print(sys.argv[0],"-p -l # to plot without logging")
         print(sys.argv[0],"-p -f <path> # to plot and log to the path")
         print(sys.argv[0],"-f <path> # dont plot, just log to the path")
+        print(sys.argv[0],"-a <file> # analyzes the log and gives a summary")
         print(sys.argv[0],"-h or --help for help")
         print("-p can be replaced with --plot")
         print("-l can be replaced with --nolog")
         print("-f can be replaced with --path")
+        print("-a can be replaced with --analyze")
         exit()
     if("--plot" in " ".join(sys.argv) or "-p" in " ".join(sys.argv)):
         plot=True
