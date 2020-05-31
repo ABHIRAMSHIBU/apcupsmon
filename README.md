@@ -13,4 +13,5 @@ A program to plot and log APC UPS via apcupsd daemon.
   &nbsp;&nbsp;&nbsp;&nbsp;```apcupsmon -h``` to display help  
   &nbsp;&nbsp;&nbsp;&nbsp;```apcupsmon -l -p``` to plot  
   &nbsp;&nbsp;&nbsp;&nbsp;```apcupsmon -p``` to log to /var/log/apcupsmon and plot  
+  &nbsp;&nbsp;&nbsp;&nbsp;```apcupsmon -a <file>``` to analyze the energy usage in that log file   
   &nbsp;&nbsp;&nbsp;&nbsp;For advanced help, use -h or --help to see other arguments.
