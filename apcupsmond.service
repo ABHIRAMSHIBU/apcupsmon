@@ -1,0 +1,14 @@
+[Unit]
+Description = APC UPS Monitor Logger Daemon
+After = NetworkManager-wait-online.service network.target network-online.target dbus.service apcupsd.service
+
+[Service]
+User = root
+Group = root
+ExecStart = /usr/bin/apcupsmon
+Restart = on-abort
+StartLimitInterval = 60
+StartLimitBurst = 10
+
+[Install]
+WantedBy = multi-user.target
