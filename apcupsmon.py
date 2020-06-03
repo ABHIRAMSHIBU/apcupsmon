@@ -34,7 +34,7 @@ def fileToCumPower(newpath):
     #inputFileName="apcupsmon_2652020.log.gz"
     fileName=None
     compress=False # Compress any way but can be changed to true to not preserve state...
-    if(inputFileName.endswith(".gz")):
+    if(inputFileName.endswith(".gz") and os.path.exists(inputFileName)):
         #detected gz compression
         compress=True
         os.system("gunzip "+inputFileName)
@@ -45,7 +45,11 @@ def fileToCumPower(newpath):
     averageVolt=0
     averageWatt=0
     averageLoad=0
-    f=open(fileName)
+    try:
+        f=open(fileName)
+    except FileNotFoundError:
+        print("No such file or directory: "+"'"+inputFileName+"'")
+        exit(-1)
     f.readline()
     while(True):
         line=f.readline()
@@ -207,7 +211,8 @@ while(True):
             else:
                 break
         #print(voltage,load,wattage)
-        columns = int(os.popen('stty size', 'r').read().split()[1])
+        if(plot):
+            columns = int(os.popen('stty size', 'r').read().split()[1])
         if(log):
             now=datetime.now()
             filename="apcupsmon_"+str(now.day)+str(now.month)+str(now.year)+".log"
@@ -220,7 +225,7 @@ while(True):
                         f=open(path+filename,"w")
                 else:
                     if(oldfile!=None):
-                        os.system("gzip "+path+"/"+oldfile)
+                        os.system("yes | gzip "+path+"/"+oldfile)
                     if(not os.path.exists((path+"/"+filename))):
                         f=open(path+"/"+filename,"w")
                 if(f):
