@@ -215,7 +215,7 @@ while(True):
             columns = int(os.popen('stty size', 'r').read().split()[1])
         if(log):
             now=datetime.now()
-            filename="apcupsmon_"+str(now.day)+str(now.month)+str(now.year)+".log"
+            filename="apcupsmon_"+str(now.day).zfill(2)+str(now.month).zfill(2)+str(now.year)+".log"
             if(oldfile!=filename):
                 f=None
                 if(path[-1]=="/"):
