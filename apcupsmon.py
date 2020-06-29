@@ -139,9 +139,7 @@ if(len(sys.argv)>=2):
         exit(0)
     if("--help" in " ".join(sys.argv) or "-h" in " ".join(sys.argv)):
         print("Example use cases")
-        print(sys.argv[0],"-p # to plot and log to /var/log/apcupsmon")
         print(sys.argv[0],"-p -l # to plot without logging")
-        print(sys.argv[0],"-p -f <path> # to plot and log to the path")
         print(sys.argv[0],"-f <path> # dont plot, just log to the path")
         print(sys.argv[0],"-a <file> # analyzes the log and gives a summary")
         print(sys.argv[0],"-h or --help for help")
@@ -171,6 +169,9 @@ if(len(sys.argv)>=2):
             exit(-1)
 else:
     print("No arguments detected, contiuing with default")
+if(plot==True and log==True):
+    print("Sorry can't plot and log at same time!")
+    exit(-1)
 if(log==False and plot==False):
     print("Northing to do, exiting")
     print("Try -h for help")
@@ -183,33 +184,73 @@ if(log):
             print("Permission denied creating "+path)
             exit(-1)
 oldfile=None
+f=None
+voltage=0
+load=0
+wattage=0
+low=180
+up=288
+transfers=0
 while(True):
     try:
         #os.system("clear")
-        p=os.popen("apcaccess")
-        voltage=0
-        load=0
-        wattage=0
-        low=180
-        up=288
-        transfers=0
-        while(True):
-            line=p.readline()
-            if(line):
-                if("LINEV" in line):
-                    voltage=float(line.split(":")[1].split(" ")[1])
-                elif("LOADPCT" in line):
-                    load=float(line.split(":")[1].split(" ")[1])
-                elif("NOMPOWER" in line):
-                    wattage=load/100*float(line.split(":")[1].split(" ")[1])
-                elif("LOTRANS" in line):
-                    low=int(float(line.split(":")[1].split(" ")[1]))
-                elif("HITRANS" in line):
-                    up=int(float(line.split(":")[1].split(" ")[1]))
-                elif("NUMXFERS" in line):
-                    transfers=int(float(line.split(":")[1].split(" ")[1]))
-            else:
-                break
+        p=None
+        if(plot==False):
+            p=os.popen("apcaccess")
+        if(plot==False):
+            while(True):
+                line=p.readline()
+                if(line):
+                    if("LINEV" in line):
+                        voltage=float(line.split(":")[1].split(" ")[1])
+                    elif("LOADPCT" in line):
+                        load=float(line.split(":")[1].split(" ")[1])
+                    elif("NOMPOWER" in line):
+                        wattage=load/100*float(line.split(":")[1].split(" ")[1])
+                    elif("LOTRANS" in line):
+                        low=int(float(line.split(":")[1].split(" ")[1]))
+                    elif("HITRANS" in line):
+                        up=int(float(line.split(":")[1].split(" ")[1]))
+                    elif("NUMXFERS" in line):
+                        transfers=int(float(line.split(":")[1].split(" ")[1]))
+                else:
+                    break
+        else:
+            now=datetime.now()
+            filename="apcupsmon_"+str(now.day).zfill(2)+str(now.month).zfill(2)+str(now.year)+".log"
+            if(oldfile!=filename):
+                f=None
+                if(path[-1]=="/"):
+                    # if(oldfile!=None):
+                    #     os.system("gzip "+path+oldfile)
+                    while(not os.path.exists((path+filename))):
+                        time.sleep(0.1)
+                    f=open(path+filename,"r")
+                    while(f.readline()==""):
+                        time.sleep(0.2)
+                    while(f.readline()!=""):
+                        pass
+                else:
+                    # if(oldfile!=None):
+                    #     os.system("yes | gzip "+path+"/"+oldfile)
+                    while(not os.path.exists((path+"/"+filename))):
+                        time.sleep(0.1)
+                    f=open(path+"/"+filename,"r")
+                    while(f.readline()==""):
+                        time.sleep(0.2)
+                    while(f.readline()!=""):
+                        pass
+                oldfile=filename
+            line=f.readline().split("\t")
+            while(True):
+                if(len(line)==5):
+                    break
+                time.sleep(0.2)
+                line=f.readline().split("\t")
+            voltage=int(line[1].strip())
+            wattage=int(line[2].strip())
+            load=int(line[3].strip())
+            transfers=int(line[4].strip())
         #print(voltage,load,wattage)
         if(plot):
             columns = int(os.popen('stty size', 'r').read().split()[1])
@@ -248,7 +289,10 @@ while(True):
                 printProgressBar(voltage,up,"\tVolt ","V",printEnd="\n",length=int((columns-45)/2),returnLine=False,low=low)
             else:
                 print("Terminal Size Error")
-        time.sleep(1)
+        if(not plot):
+            time.sleep(1)
+        else:
+            time.sleep(0.6)
     except KeyboardInterrupt:
         print("Bye...")
         break
