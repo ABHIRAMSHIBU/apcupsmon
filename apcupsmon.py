@@ -28,7 +28,7 @@ def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, 
     # Print New Line on Complete
     if iteration == total: 
         print()
-def fileToCumPower(newpath):
+def fileToCumPower(newpath,output=True):
     #pass1 - get average
     inputFileName=newpath
     #inputFileName="apcupsmon_2652020.log.gz"
@@ -37,9 +37,12 @@ def fileToCumPower(newpath):
     if(inputFileName.endswith(".gz") and os.path.exists(inputFileName)):
         #detected gz compression
         compress=True
-        os.system("gunzip "+inputFileName)
-        fileName=inputFileName[:-3]
+        os.system("cp "+inputFileName+" /tmp/")
+        os.system("gunzip "+"/tmp/"+inputFileName.split("/")[-1])
+        fileName="/tmp/"+inputFileName[:-3].split("/")[-1]
     else:
+        if(inputFileName.endswith(".gz")):
+            inputFileName=inputFileName[:-3]
         fileName=inputFileName
     entries=0
     averageVolt=0
@@ -51,8 +54,10 @@ def fileToCumPower(newpath):
         print("No such file or directory: "+"'"+inputFileName+"'")
         exit(-1)
     f.readline()
+    lineNo=0
     while(True):
         line=f.readline()
+        lineNo+=1
         if(line=='\n' or line==""):
             break
         else:
@@ -68,8 +73,6 @@ def fileToCumPower(newpath):
     averageWatt/=entries
     averageVolt/=entries
     #print(averageLoad,averageVolt,averageWatt)
-
-
     #pass2 - get wattage
     cumWattsSeconds=0
     cumTime=0
@@ -97,8 +100,12 @@ def fileToCumPower(newpath):
             if(prev==None):
                 prev=[hrs,minutes,seconds]
             else:
-                t1=timedelta(hours=int(prev[0]),minutes=int(prev[1]),seconds=int(prev[2]))
-                t2=timedelta(hours=int(hrs),minutes=int(minutes),seconds=int(seconds))
+                try:
+                    t1=timedelta(hours=int(prev[0]),minutes=int(prev[1]),seconds=int(prev[2]))
+                    t2=timedelta(hours=int(hrs),minutes=int(minutes),seconds=int(seconds))
+                except:
+                    print("Parse Exception caught in file",inputFileName,"line",lineNo,"Data",line)
+                    continue
                 if((t2-t1).seconds>1):
                     cumWattsSeconds+=(averageWatt)*((t2-t1).seconds-1)
                     cumTime+=(t2-t1).seconds-1
@@ -107,18 +114,70 @@ def fileToCumPower(newpath):
             cumTime+=1
     f.close()
     if(compress):
-        os.system("gzip "+fileName)
+        os.system("rm  "+fileName)
     cumTimeHrs=cumTime/60/60
     cumWattHrs=cumWattsSeconds/60/60
-    print("Estimate for date",fileName.split("_")[1].replace(".log",""))
-    print("Watt Hours for ",cumTimeHrs,"is ",cumWattHrs)
+    if(output):
+        print("Estimate for date",fileName.split("_")[1].replace(".log",""))
+        print("Watt Hours for ",cumTimeHrs,"is ",cumWattHrs)
     cumWatt24Hrs=(cumWattHrs/cumTimeHrs)*24
-    print("Watt Hours projected for 24hrs",cumWatt24Hrs)
+    if(output):
+        print("Watt Hours projected for 24hrs",cumWatt24Hrs)
     return(cumTimeHrs,cumWattHrs,cumWatt24Hrs)
 plot=False
 log=True
 path="/var/log/apcupsmon"
 if(len(sys.argv)>=2):
+    if("--stats" in " ".join(sys.argv) or "-s" in  " ".join(sys.argv)):
+    # start coding stats from here
+        dates=None
+        try:
+            try:
+                dates=sys.argv[sys.argv.index("--stats")+1]
+            except:
+                dates=sys.argv[sys.argv.index("-s")+1]
+        except:
+            print("Stats will require a date or date range")
+            exit(-1)
+        if("--" in dates or "-p" in dates or "-l" in dates or "-f" in dates or "-a" in dates):
+                print("Invalid date!")
+                exit(-1)
+        if(":" in dates):
+            dates=[i.strip() for i in dates.split(":")]
+        else:
+            dates=[dates.strip()]
+        days=0
+        if(len(dates)==2):
+            start=dates[0]
+            end=dates[1]
+            start=datetime.strptime(start,"%d-%m-%Y")
+            end=datetime.strptime(end,"%d-%m-%Y")
+            days=(end-start).days
+            incrementor=timedelta(days=1)
+            counter=0
+            files=[]
+            while(counter!=365 and end!=start-incrementor):
+                files.append(path+"/apcupsmon_"+str(start.day).zfill(2)+str(start.month).zfill(2)+str(start.year).zfill(4)+".log.gz")
+                start=start+incrementor
+                counter+=1
+            if(counter==365):
+                print("Warning: Limiting to 1 year")
+            #print(files)
+            sumWatt24Hrs=0
+            sumWattHrs=0
+            sumTimeHrs=0
+            for i in files:
+                try:
+                    cumTimeHrs,cumWattHrs,cumWatt24Hrs=fileToCumPower(i,output=False)
+                except:
+                    print(i)
+                sumWatt24Hrs+=cumWatt24Hrs
+                sumWattHrs+=cumWattHrs
+                sumTimeHrs+=cumTimeHrs
+            print("Number of days evaluated is ",days+1)
+            print("Watt Hours for ",sumTimeHrs,"is ",sumWattHrs)
+            print("Watt Hours projected for 24hrs each day",sumWatt24Hrs)
+        exit(0)
     if("--analyze" in " ".join(sys.argv) or "-a" in " ".join(sys.argv)):
         newpath=None
         try:
